@@ -19,7 +19,7 @@ buttons.forEach(button => {
 });
 
 submitButton.addEventListener('click', () => {
-    window.Electron.sendFocusScore(selectedScore);
+    // window.Electron.sendFocusScore(selectedScore);
     console.log('선택값', selectedScore)
     window.close(); // 창 닫기
 });
