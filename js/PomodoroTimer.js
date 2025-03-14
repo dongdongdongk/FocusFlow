@@ -10,10 +10,6 @@ let timerInterval;
 const timerElement = document.getElementById("timer");
 const startStopButton = document.getElementById("startStopButton");
 const resetButton = document.getElementById("resetButton");
-const scoreText = document.getElementById("scoreText");
-const focusScoreModal = document.getElementById("focusScoreModal");
-const scoreInput = document.getElementById("scoreInput");
-const submitScoreButton = document.getElementById("submitScoreButton");
 const titleElement = document.getElementById("title");
 
 function formatTime(seconds) {
@@ -40,12 +36,12 @@ function handleStartStop() {
       if (time === 0) {
         clearInterval(timerInterval);
         if (!isBreak) {
-          showFocusScoreModal();
           isBreak = true;
           time = BREAK_TIME; // Switch to break time
           updateTitle(); // Update title to "휴식 시간"
           updateTimer(); // Update break time on UI
           startBreakTimer(); // Start break timer automatically
+          window.Electron.openCheckWindow();
         } else {
           isBreak = false;
           time = POMODORO_TIME; // Switch back to focus time
@@ -78,12 +74,12 @@ function startFocusTimer() {
     updateTimer();
     if (time === 0) {
       clearInterval(timerInterval);
-      showFocusScoreModal(); // Show the focus score modal after the Pomodoro session ends
       isBreak = true;
       time = BREAK_TIME;
       updateTitle(); // Update title to "휴식 시간"
       updateTimer(); // Update break time on UI
       startBreakTimer(); // Start break timer automatically
+      window.Electron.openCheckWindow();
     }
   }, 1000);
 }
@@ -109,23 +105,9 @@ function startBreakTimer() {
   }, 1000); // Delay the start by 1 second after switching to break
 }
 
-function showFocusScoreModal() {
-  focusScoreModal.style.display = "flex";
-}
-
-function closeFocusScoreModal() {
-  focusScoreModal.style.display = "none";
-}
-
-function handleFocusScoreSubmit() {
-  focusScore = parseInt(scoreInput.value, 10);
-  scoreText.textContent = `지난 세션 집중도: ${focusScore}점`;
-  closeFocusScoreModal();
-}
 
 startStopButton.addEventListener("click", handleStartStop);
 resetButton.addEventListener("click", handleReset);
-submitScoreButton.addEventListener("click", handleFocusScoreSubmit);
 
 updateTimer();
 updateTitle(); // Initialize title

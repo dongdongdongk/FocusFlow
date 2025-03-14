@@ -1,0 +1,24 @@
+body {
+    font-family: Arial, sans-serif;
+    text-align: center;
+    padding: 20px;
+}
+.focus-level {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin-top: 20px;
+}
+.focus-level button {
+    padding: 10px 20px;
+    font-size: 18px;
+    border: 2px solid #ccc;
+    background-color: white;
+    cursor: pointer;
+    transition: 0.3s;
+}
+.focus-level button.selected {
+    background-color: #007BFF;
+    color: white;
+    border-color: #0056b3;
+}

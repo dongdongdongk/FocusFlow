@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>집중도 체크</title>
+    <link rel="stylesheet" href="../css/check.css">
+</head>
+<body>
+    <h1>집중도 체크</h1>
+    <p>이번 세션의 집중도를 선택하세요</p>
+    <div class="focus-level">
+        <button data-score="1">1 (나쁨)</button>
+        <button data-score="2">2 (약간 부족)</button>
+        <button data-score="3" class="selected">3 (보통)</button>
+        <button data-score="4">4 (좋음)</button>
+        <button data-score="5">5 (최고)</button>
+    </div>
+    <p id="selectedScore">선택한 집중도: 3점</p>
+    <button id="submitScore">제출</button>
+
+    <script src="../js/check.js"></script>
+</body>
+</html>
