@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>포모도로 타이머</title>
+  <link rel="stylesheet" href="../css/index.css">
+</head>
+<body>
+  <div class="pomodoro-container">
+    <h1 id="title" class="title">포모도로 타이머</h1>
+    <p class="timer" id="timer">25:00</p>
+    <button id="startStopButton" class="button">시작</button>
+    <button id="resetButton" class="button reset">리셋</button>
+    <p id="scoreText" class="score"></p>
+
+    <!-- Focus Score Modal -->
+    <div id="focusScoreModal" class="modal-overlay" style="display: none;">
+      <div class="modal">
+        <h2>집중도 점수 입력</h2>
+        <input
+          type="number"
+          id="scoreInput"
+          min="1"
+          max="5"
+          value="3"
+          placeholder="1 ~ 5점"
+        />
+        <button id="submitScoreButton" class="button">확인</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="../js/PomodoroTimer.js"></script>
+</body>
+</html>
