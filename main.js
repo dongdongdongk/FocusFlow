@@ -8,6 +8,7 @@ const {
 const sound = require("sound-play");
 const path = require("path");
 const fs = require("fs");
+const AppTray = require("./js/AppTray");
 
 process.env.NODE_ENV = "dev";
 
@@ -17,12 +18,16 @@ const isMac = process.platform === "darwin" ? true : false;
 let aboutWindow;
 let mainWindow;
 let checkWindow;
+let tray;
 let scores = [];
 
 // 🔹 사운드 파일 매핑
 const soundFiles = {
     focus_start: path.join(__dirname, "./assets/focus_start.mp3"),
-    all_sessions_completed: path.join(__dirname, "./assets/all_sessions_completed.mp3"),
+    all_sessions_completed: path.join(
+        __dirname,
+        "./assets/all_sessions_completed.mp3"
+    ),
     focus_5min: path.join(__dirname, "./assets/focus_5min.mp3"),
     focus_1min: path.join(__dirname, "./assets/focus_1min.mp3"),
     break_5min: path.join(__dirname, "./assets/break_5min.mp3"),
@@ -62,9 +67,10 @@ function createCheckWindow() {
     checkWindow = new BrowserWindow({
         title: "Check Window",
         width: isDev ? 900 : 700,
-        height: 600,
+        height: 750,
         resizable: true,
         backgroundColor: "white",
+        alwaysOnTop: true,
         webPreferences: {
             preload: path.join(__dirname, "preload.js"),
             contextIsolation: true,
@@ -139,7 +145,18 @@ app.on("ready", () => {
         mainWindow.toggleDevTools()
     );
 
-    mainWindow.on("closed", () => (mainWindow = null));
+    // mainWindow.on("closed", () => (mainWindow = null));
+
+    mainWindow.on("close", (e) => {
+        if (!app.isQuitting) {
+            e.preventDefault();
+            mainWindow.hide();
+        }
+        return true;
+    });
+
+    const icon = path.join(__dirname, "./assets/tray_icon.png");
+    tray = new AppTray(icon, mainWindow);
 });
 
 const menu = [

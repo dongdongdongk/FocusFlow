@@ -101,17 +101,37 @@ function handleTimerComplete() {
   startStopButton.textContent = "시작";
 
   if (!isBreak) {
-    // 집중 세션 종료 -> 휴식 세션 시작
-    const alertType = "break_start";
-    playAlert(alertType);
-    isBreak = true;
-    time = sessions[currentSessionIndex].breakTime * 60;
-    updateTitle();
-    updateTimer();
-    window.Electron.openCheckWindow(); // 점수 입력
+    // 마지막 세션인지 확인
+    const isLastSession = currentSessionIndex === sessions.length - 1;
+    
+    if (isLastSession) {
+      // 마지막 세션이면 모든 세션 완료로 처리
+      const alertType = "all_sessions_completed";
+      playAlert(alertType);
+      notifyUser({
+        title: "알림",
+        body: '모든 세션이 종료되었습니다!'
+      });
+      currentSessionIndex = null;
+      startStopButton.textContent = "시작";
+      window.Electron.openCheckWindow();
+    } else {
+      // 마지막 세션이 아니면 휴식 시간 시작
+      const alertType = "break_start";
+      playAlert(alertType);
+      notifyUser({
+        title: "알림",
+        body: '센션이 종료 되었습니다 휴식 시간을 시작 합니다.'
+      });
+      isBreak = true;
+      time = sessions[currentSessionIndex].breakTime * 60;
+      updateTitle();
+      updateTimer();
+      window.Electron.openCheckWindow(); // 점수 입력
 
-    // 자동으로 휴식 타이머 시작
-    startTimer();
+      // 자동으로 휴식 타이머 시작
+      startTimer();
+    }
   } else {
     // 휴식 세션 종료 -> 다음 집중 세션 시작
     isBreak = false;
@@ -121,19 +141,16 @@ function handleTimerComplete() {
       // 다음 세션으로 넘어가기
       const alertType = "focus_start";
       playAlert(alertType);
+      notifyUser({
+        title: "알림",
+        body: '집중 세션을 시작 합니다.'
+      });
       time = sessions[currentSessionIndex].focusTime * 60;
       updateTitle();
       updateTimer();
 
       // 자동으로 다음 집중 세션 시작
       startTimer();
-    } else {
-      // 모든 세션이 끝난 후
-      const alertType = "all_sessions_completed"; // 모든 세션 종료 알림
-      playAlert(alertType);
-      alert("모든 세션이 종료되었습니다!");
-      currentSessionIndex = null; // 세션을 모두 완료하면 currentSessionIndex를 null로 설정
-      startStopButton.textContent = "시작"; // 버튼 상태를 "시작"으로 변경
     }
   }
 }
@@ -178,10 +195,13 @@ function handleReset() {
 }
 
 function addSession() {
-  const sessionName =
-    document.getElementById("sessionName").value || "세션 이름 없음";
-  const focusTime = parseInt(document.getElementById("focusTime").value) || 25;
-  const breakTime = parseInt(document.getElementById("breakTime").value) || 5;
+  const sessionNameInput = document.getElementById("sessionName");
+  const focusTimeInput = document.getElementById("focusTime");
+  const breakTimeInput = document.getElementById("breakTime");
+  
+  const sessionName = sessionNameInput.value || "세션 이름 없음";
+  const focusTime = parseInt(focusTimeInput.value) || 25;
+  const breakTime = parseInt(breakTimeInput.value) || 5;
 
   const session = {
     sessionName,
@@ -190,11 +210,21 @@ function addSession() {
   };
 
   sessions.push(session);
+  
+  // 입력 필드 초기화 - HTML에 정의된 기본값으로 복원
+  sessionNameInput.value = ""; // 세션 이름은 빈 문자열로 초기화
+  focusTimeInput.value = "25"; // HTML의 value="25"에 맞춤
+  breakTimeInput.value = "5";  // HTML의 value="5"에 맞춤
 
   // 세션 리스트 UI에 추가
   const sessionItem = document.createElement("li");
-  sessionItem.textContent = `${session.sessionName} - 집중: ${focusTime}분, 휴식: ${breakTime}분`;
-  sessionItem.addEventListener("click", () => {
+  sessionItem.className = "session-item"; // 스타일링을 위한 클래스 추가
+  
+  // 세션 정보를 담을 span 요소 생성
+  const sessionInfo = document.createElement("span");
+  sessionInfo.className = "session-info";
+  sessionInfo.textContent = `${session.sessionName} - 집중: ${focusTime}분, 휴식: ${breakTime}분`;
+  sessionInfo.addEventListener("click", () => {
     // 타이머 초기화
     clearInterval(timerInterval);
     isRunning = false;
@@ -208,6 +238,42 @@ function addSession() {
     startStopButton.textContent = "시작";
     startStopButton.style.display = "inline-block"; // 버튼 보이기
   });
+  
+  // 삭제 버튼 생성
+  const deleteButton = document.createElement("button");
+  deleteButton.className = "delete-button";
+  deleteButton.textContent = "×"; // X 표시
+  deleteButton.addEventListener("click", (e) => {
+    e.stopPropagation(); // 이벤트 버블링 방지
+    
+    // 세션 배열에서 제거
+    const index = sessions.indexOf(session);
+    if (index > -1) {
+      sessions.splice(index, 1);
+    }
+    
+    // UI에서 제거
+    sessionsList.removeChild(sessionItem);
+    
+    // 현재 선택된 세션을 삭제한 경우 타이머 초기화
+    if (currentSessionIndex === index) {
+      clearInterval(timerInterval);
+      isRunning = false;
+      currentSessionIndex = null;
+      time = 0;
+      updateTimer();
+      titleElement.textContent = "포모도로 타이머";
+      sesionTitle.textContent = "";
+      startStopButton.textContent = "시작";
+    } else if (currentSessionIndex > index) {
+      // 삭제한 세션이 현재 선택된 세션보다 앞에 있었다면, 인덱스 조정
+      currentSessionIndex--;
+    }
+  });
+  
+  // 세션 아이템에 세션 정보와 삭제 버튼 추가
+  sessionItem.appendChild(sessionInfo);
+  sessionItem.appendChild(deleteButton);
 
   sessionsList.appendChild(sessionItem);
 }
