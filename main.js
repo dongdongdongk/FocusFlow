@@ -10,7 +10,7 @@ const path = require("path");
 const fs = require("fs");
 const AppTray = require("./js/AppTray");
 
-process.env.NODE_ENV = "dev";
+process.env.NODE_ENV = "production";
 
 const isDev = process.env.NODE_ENV !== "production" ? true : false;
 const isMac = process.platform === "darwin" ? true : false;

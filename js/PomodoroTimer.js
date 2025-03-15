@@ -36,12 +36,17 @@ function formatTime(seconds) {
 
 function updateTimer() {
   timerElement.textContent = formatTime(time);
-  // console.log(`현재 time : ${time}`);
+  console.log(`현재 time : ${time}`);
 }
 
 function updateTitle() {
   titleElement.textContent = isBreak ? "휴식 시간" : "포모도로 타이머";
-  sesionTitle.textContent = sessions[currentSessionIndex].sessionName;
+  // 현재 세션이 선택됐을 때만 세션 이름 표시
+  if (currentSessionIndex !== null && sessions[currentSessionIndex]) {
+    sesionTitle.textContent = sessions[currentSessionIndex].sessionName;
+  } else {
+    sesionTitle.textContent = "";
+  }
 }
 
 function notifyUser(option) {
@@ -50,6 +55,7 @@ function notifyUser(option) {
 
 // 타이머 시작 함수 (분리하여 재사용 가능하게 함)
 function startTimer() {
+  console.log(`🚀 startTimer 호출됨! time: ${time}`); // ✅ 로그 추가
   if (time > 0) {
     isRunning = true;
     startStopButton.textContent = "일시정지";
@@ -103,25 +109,34 @@ function handleTimerComplete() {
   if (!isBreak) {
     // 마지막 세션인지 확인
     const isLastSession = currentSessionIndex === sessions.length - 1;
-    
+
     if (isLastSession) {
-      // 마지막 세션이면 모든 세션 완료로 처리
+      // 마지막 세션이면 모든 세션 완료로 처리 (휴식 시간 없이 바로 종료)
       const alertType = "all_sessions_completed";
       playAlert(alertType);
       notifyUser({
         title: "알림",
-        body: '모든 세션이 종료되었습니다!'
+        body: "모든 세션이 완료되었습니다!",
       });
-      currentSessionIndex = null;
-      startStopButton.textContent = "시작";
+
+      // 점수 입력 창 표시
       window.Electron.openCheckWindow();
+
+      // 타이머 상태 업데이트
+      time = 0;
+      updateTimer();
+      titleElement.textContent = "포모도로 타이머";
+      sesionTitle.textContent = "모든 세션 완료";
+
+      // 현재 세션 인덱스는 null로 설정하지 않고 유지
+      // (다시 시작하려면 처음부터 시작)
     } else {
       // 마지막 세션이 아니면 휴식 시간 시작
       const alertType = "break_start";
       playAlert(alertType);
       notifyUser({
         title: "알림",
-        body: '센션이 종료 되었습니다 휴식 시간을 시작 합니다.'
+        body: "센션이 종료 되었습니다 휴식 시간을 시작 합니다.",
       });
       isBreak = true;
       time = sessions[currentSessionIndex].breakTime * 60;
@@ -137,21 +152,19 @@ function handleTimerComplete() {
     isBreak = false;
     currentSessionIndex++;
 
-    if (currentSessionIndex < sessions.length) {
-      // 다음 세션으로 넘어가기
-      const alertType = "focus_start";
-      playAlert(alertType);
-      notifyUser({
-        title: "알림",
-        body: '집중 세션을 시작 합니다.'
-      });
-      time = sessions[currentSessionIndex].focusTime * 60;
-      updateTitle();
-      updateTimer();
+    // 다음 세션으로 넘어가기
+    const alertType = "focus_start";
+    playAlert(alertType);
+    notifyUser({
+      title: "알림",
+      body: "집중 세션을 시작합니다.",
+    });
+    time = sessions[currentSessionIndex].focusTime * 60;
+    updateTitle();
+    updateTimer();
 
-      // 자동으로 다음 집중 세션 시작
-      startTimer();
-    }
+    // 자동으로 다음 집중 세션 시작
+    startTimer();
   }
 }
 
@@ -164,10 +177,18 @@ function handleStartStop() {
   } else {
     // 타이머 시작 또는 재개
     if (currentSessionIndex === null && sessions.length > 0) {
-      // 첫 세션 시작
+      // 첫 세션 시작 또는 모든 세션 완료 후 다시 시작
       const alertType = "focus_start";
       playAlert(alertType);
       currentSessionIndex = 0;
+      isBreak = false;
+      time = sessions[currentSessionIndex].focusTime * 60;
+      updateTitle();
+      updateTimer();
+    } else if (time === 0 && currentSessionIndex !== null) {
+      // 세션이 완료되었지만 다시 시작하는 경우
+      currentSessionIndex = 0;
+      isBreak = false;
       time = sessions[currentSessionIndex].focusTime * 60;
       updateTitle();
       updateTimer();
@@ -179,9 +200,11 @@ function handleStartStop() {
 
 function handleReset() {
   clearInterval(timerInterval);
+  clearTimeout(fiveMinAlert);
+  clearTimeout(oneMinAlert);
   isRunning = false;
 
-  if (currentSessionIndex !== null) {
+  if (currentSessionIndex !== null && currentSessionIndex < sessions.length) {
     time = isBreak
       ? sessions[currentSessionIndex].breakTime * 60
       : sessions[currentSessionIndex].focusTime * 60;
@@ -198,7 +221,7 @@ function addSession() {
   const sessionNameInput = document.getElementById("sessionName");
   const focusTimeInput = document.getElementById("focusTime");
   const breakTimeInput = document.getElementById("breakTime");
-  
+
   const sessionName = sessionNameInput.value || "세션 이름 없음";
   const focusTime = parseInt(focusTimeInput.value) || 25;
   const breakTime = parseInt(breakTimeInput.value) || 5;
@@ -210,16 +233,16 @@ function addSession() {
   };
 
   sessions.push(session);
-  
+
   // 입력 필드 초기화 - HTML에 정의된 기본값으로 복원
   sessionNameInput.value = ""; // 세션 이름은 빈 문자열로 초기화
   focusTimeInput.value = "25"; // HTML의 value="25"에 맞춤
-  breakTimeInput.value = "5";  // HTML의 value="5"에 맞춤
+  breakTimeInput.value = "5"; // HTML의 value="5"에 맞춤
 
   // 세션 리스트 UI에 추가
   const sessionItem = document.createElement("li");
   sessionItem.className = "session-item"; // 스타일링을 위한 클래스 추가
-  
+
   // 세션 정보를 담을 span 요소 생성
   const sessionInfo = document.createElement("span");
   sessionInfo.className = "session-info";
@@ -227,6 +250,8 @@ function addSession() {
   sessionInfo.addEventListener("click", () => {
     // 타이머 초기화
     clearInterval(timerInterval);
+    clearTimeout(fiveMinAlert);
+    clearTimeout(oneMinAlert);
     isRunning = false;
     isBreak = false;
 
@@ -238,7 +263,7 @@ function addSession() {
     startStopButton.textContent = "시작";
     startStopButton.style.display = "inline-block"; // 버튼 보이기
   });
-  
+
   // 삭제 버튼 생성
   const deleteButton = document.createElement("button");
   deleteButton.className = "delete-button";
@@ -258,6 +283,8 @@ function addSession() {
     // 현재 선택된 세션을 삭제한 경우 타이머 초기화
     if (currentSessionIndex === index) {
       clearInterval(timerInterval);
+      clearTimeout(fiveMinAlert);
+      clearTimeout(oneMinAlert);
       isRunning = false;
       currentSessionIndex = null;
       time = 0;
