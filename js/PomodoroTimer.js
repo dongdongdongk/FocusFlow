@@ -123,7 +123,10 @@ function handleTimerComplete() {
       window.Electron.openCheckWindow();
 
       // 타이머 상태 업데이트
-      time = 0;
+      isBreak = false; 
+      time = sessions[currentSessionIndex].focusTime * 60;
+      currentSessionIndex = null;
+
       updateTimer();
       titleElement.textContent = "포모도로 타이머";
       sesionTitle.textContent = "모든 세션 완료";
@@ -187,6 +190,8 @@ function handleStartStop() {
       updateTimer();
     } else if (time === 0 && currentSessionIndex !== null) {
       // 세션이 완료되었지만 다시 시작하는 경우
+      const alertType = "focus_start";
+      playAlert(alertType);
       currentSessionIndex = 0;
       isBreak = false;
       time = sessions[currentSessionIndex].focusTime * 60;
@@ -270,21 +275,19 @@ function addSession() {
   deleteButton.textContent = "×"; // X 표시
   deleteButton.addEventListener("click", (e) => {
     e.stopPropagation(); // 이벤트 버블링 방지
-    
+
     // 세션 배열에서 제거
     const index = sessions.indexOf(session);
     if (index > -1) {
       sessions.splice(index, 1);
     }
-    
+
     // UI에서 제거
     sessionsList.removeChild(sessionItem);
-    
+
     // 현재 선택된 세션을 삭제한 경우 타이머 초기화
     if (currentSessionIndex === index) {
       clearInterval(timerInterval);
-      clearTimeout(fiveMinAlert);
-      clearTimeout(oneMinAlert);
       isRunning = false;
       currentSessionIndex = null;
       time = 0;
@@ -297,7 +300,7 @@ function addSession() {
       currentSessionIndex--;
     }
   });
-  
+
   // 세션 아이템에 세션 정보와 삭제 버튼 추가
   sessionItem.appendChild(sessionInfo);
   sessionItem.appendChild(deleteButton);
