@@ -1,20 +1,40 @@
-let timerInterval;
 let isRunning = false;
-let isBreak = false;
-let currentSessionIndex = null;
 let time = 0;
-let focusScore = null;
+let sessions = [];
+let currentSessionIndex = null;
 
 const timerElement = document.getElementById("timer");
 const startStopButton = document.getElementById("startStopButton");
 const resetButton = document.getElementById("resetButton");
-const titleElement = document.getElementById("title");
-const sessionSettings = document.getElementById("sessionSettings");
-const scoreText = document.getElementById("scoreText");
+const sessionNameInput = document.getElementById("sessionName");
+const focusTimeInput = document.getElementById("focusTime");
+const breakTimeInput = document.getElementById("breakTime");
 const sessionsList = document.getElementById("sessions");
-const sesionTitle = document.getElementById("sesionTitle");
+const sessionTitle = document.getElementById("sesionTitle");
 
-let sessions = []; // 세션을 저장할 배열
+window.Electron.onUpdateTimer((newTime) => {
+  time = newTime;
+  updateTimer();
+});
+
+window.Electron.onUpdateSessions((newSessions) => {
+  sessions = newSessions;
+  updateSessionsList();
+});
+
+window.Electron.onUpdateTitle((newTitle) => {
+  sessionTitle.textContent = newTitle;
+});
+
+window.Electron.onAllSessionsCompleted(() => {
+  alert('모든 세션이 완료되었습니다!');
+  sessionTitle.textContent = "모든 세션 완료";
+});
+
+
+function updateTimer() {
+  timerElement.textContent = formatTime(time);
+}
 
 function formatTime(seconds) {
   const minutes = Math.floor(seconds / 60);
@@ -22,143 +42,81 @@ function formatTime(seconds) {
   return `${minutes}:${remainingSeconds.toString().padStart(2, "0")}`;
 }
 
+
 function updateTimer() {
   timerElement.textContent = formatTime(time);
   console.log(`현재 time : ${time}`);
 }
 
-function updateTitle() {
-  titleElement.textContent = isBreak ? "휴식 시간" : "포모도로 타이머";
-  sesionTitle.textContent = sessions[currentSessionIndex].sessionName
-}
-
-// 타이머 시작 함수 (분리하여 재사용 가능하게 함)
-function startTimer() {
-  if (time > 0) {
-    isRunning = true;
-    startStopButton.textContent = "일시정지";
-    
-    timerInterval = setInterval(() => {
-      time--;
-      updateTimer();
-      
-      if (time === 0) {
-        clearInterval(timerInterval);
-        handleTimerComplete();
-      }
-    }, 1000);
-  }
-}
-
-// 타이머 완료 처리 함수
-function handleTimerComplete() {
-  isRunning = false;
-  startStopButton.textContent = "시작";
-  
-  if (!isBreak) {
-    // 집중 세션 종료 -> 휴식 세션 시작
-    isBreak = true;
-    time = sessions[currentSessionIndex].breakTime * 60;
-    updateTitle();
-    updateTimer();
-    window.Electron.openCheckWindow(); // 점수 입력
-    
-    // 자동으로 휴식 타이머 시작
-    startTimer();
-  } else {
-    // 휴식 세션 종료 -> 다음 집중 세션 시작
-    isBreak = false;
-    currentSessionIndex++;
-    
-    if (currentSessionIndex < sessions.length) {
-      // 다음 세션으로 넘어가기
-      time = sessions[currentSessionIndex].focusTime * 60;
-      updateTitle();
-      updateTimer();
-      
-      // 자동으로 다음 집중 세션 시작
-      startTimer();
-    } else {
-      // 모든 세션이 끝난 후
-      alert("모든 세션이 종료되었습니다!");
-      currentSessionIndex = null;
-    }
-  }
-}
-
-function handleStartStop() {
+function startStop() {
   if (isRunning) {
-    // 타이머 일시정지
-    clearInterval(timerInterval);
-    isRunning = false;
+    window.Electron.stopTimer();
     startStopButton.textContent = "시작";
   } else {
-    // 타이머 시작 또는 재개
-    if (currentSessionIndex === null && sessions.length > 0) {
-      // 첫 세션 시작
-      currentSessionIndex = 0;
-      time = sessions[currentSessionIndex].focusTime * 60;
-      updateTitle();
-      updateTimer();
-    }
-    
-    startTimer();
+    startSession(currentSessionIndex)
+    // window.Electron.startTimer();
+    startStopButton.textContent = "일시정지";
   }
+  isRunning = !isRunning;
 }
 
-function handleReset() {
-  clearInterval(timerInterval);
-  isRunning = false;
-  
-  if (currentSessionIndex !== null) {
-    time = isBreak ? 
-      sessions[currentSessionIndex].breakTime * 60 : 
-      sessions[currentSessionIndex].focusTime * 60;
-  } else {
-    time = 0;
-  }
-  
-  updateTimer();
-  updateTitle();
+function reset() {
+  window.Electron.resetTimer();
   startStopButton.textContent = "시작";
+  isRunning = false;
 }
+
 
 function addSession() {
-  const sessionName = document.getElementById("sessionName").value || "세션 이름 없음";
-  const focusTime = parseInt(document.getElementById("focusTime").value) || 25;
-  const breakTime = parseInt(document.getElementById("breakTime").value) || 5;
+  const sessionName = sessionNameInput.value || "세션 이름 없음";
+  const focusTime = parseInt(focusTimeInput.value) || 25;
+  const breakTime = parseInt(breakTimeInput.value) || 5;
 
   const session = {
     sessionName,
-    focusTime,  // Focus time in minutes
-    breakTime,  // Break time in minutes
+    focusTime, // Focus time in minutes
+    breakTime, // Break time in minutes
   };
 
-  sessions.push(session);
+  window.Electron.addSession(session);
 
-  // 세션 리스트 UI에 추가
-  const sessionItem = document.createElement("li");
-  sessionItem.textContent = `${session.sessionName} - 집중: ${focusTime}분, 휴식: ${breakTime}분`;
-  sessionItem.addEventListener("click", () => {
-    // 타이머 초기화
-    clearInterval(timerInterval);
-    isRunning = false;
-    isBreak = false;
+  sessionNameInput.value = "";
+  focusTimeInput.value = "25";
+  breakTimeInput.value = "5";
+}
+
+function deleteSession(index) {
+  window.Electron.deleteSession(index);
+}
+
+
+function startSession(index) {
+  window.Electron.startSession(index);
+}
+
+function updateSessionsList() {
+  sessionsList.innerHTML = "";
+  sessions.forEach((session, index) => {
+    const sessionItem = document.createElement("li");
+    sessionItem.textContent = `${session.sessionName} - 집중: ${session.focusTime}분, 휴식: ${session.breakTime}분`;
     
-    // 선택된 세션으로 설정
-    currentSessionIndex = sessions.indexOf(session);
-    time = session.focusTime * 60;
-    updateTitle();
-    updateTimer();
-    startStopButton.textContent = "시작";
-    startStopButton.style.display = "inline-block"; // 버튼 보이기
+    const deleteButton = document.createElement("button");
+    deleteButton.textContent = "×";
+    deleteButton.addEventListener("click", () => deleteSession(index));
+    
+    const startButton = document.createElement("button");
+    startButton.textContent = "시작";
+    startButton.addEventListener("click", () => startSession(index));
+    
+    sessionItem.appendChild(startButton);
+    sessionItem.appendChild(deleteButton);
+    sessionsList.appendChild(sessionItem);
   });
-
-  sessionsList.appendChild(sessionItem);
 }
 
 document.getElementById("addSessionButton").addEventListener("click", addSession);
-startStopButton.addEventListener("click", handleStartStop);
-resetButton.addEventListener("click", handleReset);
+startStopButton.addEventListener('click', startStop);
+resetButton.addEventListener('click', reset);
 
+// Initialize the timer display
 updateTimer();

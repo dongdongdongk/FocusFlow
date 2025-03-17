@@ -9,8 +9,13 @@ const isMac = process.platform === 'darwin' ? true : false
 
 let aboutWindow;
 let mainWindow;
+let timerInterval;
 let checkWindow;
-let scores = [];
+let isBreak = false;
+let isRunning = false;
+let time = 0;
+let sessions = [];
+let currentSessionIndex = null;
 
 
 function createMainWindow() {
