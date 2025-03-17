@@ -170,4 +170,100 @@ app.on('window-all-closed', () => {
 })
 
 
+
+ipcMain.handle('start-timer', () => {
+    if (!isRunning && time > 0) {
+        isRunning = true;
+        timerInterval = setInterval(() => {
+            time--;
+            mainWindow.webContents.send('update-timer', time);
+
+            if (time === 0) {
+                clearInterval(timerInterval);
+                handleTimerComplete();
+            }
+        }, 1000);
+    }
+});
+
+
+ipcMain.handle('stop-timer', () => {
+    clearInterval(timerInterval);
+    isRunning = false;
+});
+
+ipcMain.handle('reset-timer', () => {
+    clearInterval(timerInterval);
+    isRunning = false;
+    time = sessions[currentSessionIndex] ? sessions[currentSessionIndex].focusTime * 60 : 0;
+    mainWindow.webContents.send('update-timer', time);
+});
+
+
+ipcMain.handle('set-time', (event, newTime) => {
+    time = newTime;
+    mainWindow.webContents.send('update-timer', time);
+});
+
+ipcMain.handle('add-session', (event, session) => {
+    sessions.push(session);
+    mainWindow.webContents.send('update-sessions', sessions);
+});
+
+ipcMain.handle('delete-session', (event, index) => {
+    sessions.splice(index, 1);
+    if (currentSessionIndex === index) {
+        time = 0;
+        currentSessionIndex = null;
+        isRunning = false;
+        mainWindow.webContents.send('update-timer', time);
+    } else if (currentSessionIndex > index) {
+        currentSessionIndex--;
+    }
+    mainWindow.webContents.send('update-sessions', sessions);
+});
+
+ipcMain.handle('start-session', (event, index) => {
+    currentSessionIndex = index;
+    const session = sessions[currentSessionIndex];
+    isBreak = false;
+    time = session.focusTime * 60;
+    mainWindow.webContents.send('update-timer', time);
+    mainWindow.webContents.send('update-title', session.sessionName);
+    startTimer();
+});
+
+function handleTimerComplete() {
+    if (isBreak) {
+        isBreak = false;
+        currentSessionIndex++;
+        if (currentSessionIndex < sessions.length) {
+            time = sessions[currentSessionIndex].focusTime * 60;
+            mainWindow.webContents.send('update-timer', time);
+            startTimer();
+        } else {
+            mainWindow.webContents.send('all-sessions-completed');
+        }
+    } else {
+        isBreak = true;
+        time = sessions[currentSessionIndex].breakTime * 60;
+        mainWindow.webContents.send('update-timer', time);
+        startTimer();
+    }
+}
+
+function startTimer() {
+    if (!isRunning) return;
+    timerInterval = setInterval(() => {
+        time--;
+        mainWindow.webContents.send('update-timer', time);
+
+        if (time === 0) {
+            clearInterval(timerInterval);
+            handleTimerComplete();
+        }
+    }, 1000);
+}
+
+
 app.allowRendererProcessReuse = true;
