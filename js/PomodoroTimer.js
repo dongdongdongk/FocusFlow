@@ -98,17 +98,19 @@ function updateSessionsList() {
   sessionsList.innerHTML = "";
   sessions.forEach((session, index) => {
     const sessionItem = document.createElement("li");
+    sessionItem.className = "session-item";
     sessionItem.textContent = `${session.sessionName} - 집중: ${session.focusTime}분, 휴식: ${session.breakTime}분`;
     
     const deleteButton = document.createElement("button");
+    deleteButton.className = "delete-button";
     deleteButton.textContent = "×";
     deleteButton.addEventListener("click", () => deleteSession(index));
     
-    const startButton = document.createElement("button");
-    startButton.textContent = "시작";
-    startButton.addEventListener("click", () => startSession(index));
+    // const startButton = document.createElement("button");
+    // startButton.textContent = "시작";
+    // startButton.addEventListener("click", () => startSession(index));
     
-    sessionItem.appendChild(startButton);
+    // sessionItem.appendChild(startButton);
     sessionItem.appendChild(deleteButton);
     sessionsList.appendChild(sessionItem);
   });
